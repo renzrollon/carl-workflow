@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# OS scratch
+Thumbs.db
+
+# Backups created by install.sh
+*.bak.*
