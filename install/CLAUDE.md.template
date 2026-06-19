@@ -12,7 +12,17 @@ in the carl-workflow repo and paste them below.
 
 ## Stack
 
-<!-- describe your stack here: language, frameworks, database, test runner -->
+<!--
+Describe your stack here: language, frameworks, database, test runner.
+Include version constraints that affect agent behavior:
+-->
+
+<!-- EXAMPLE (delete and replace with your own):
+- Next.js 16.x with Turbopack enabled by default. Do NOT attempt to disable Turbopack — there is no env var, CLI flag, or config option to do so. If builds OOM, increase Colima VM memory.
+- pnpm 10.x — do NOT use npm or yarn
+- Prisma 7.x for database
+- Vitest for testing
+-->
 
 ## Architecture
 
@@ -21,12 +31,47 @@ High-level shape of the codebase: where things live, what depends on what,
 which boundaries matter (server/client, public/internal, etc.).
 -->
 
+## Local Environment
+
+<!--
+Document environment quirks that agents consistently stumble on.
+These are things that can't be inferred from code inspection alone.
+-->
+
+<!-- EXAMPLE (delete and replace with your own):
+- Docker builds run inside Colima. Alpine apk repos may have stale TLS certs — try `apk info -e <pkg>` before `apk add`, and use `--no-check-certificate` if adding fails.
+- Corporate proxy requires NODE_TLS_REJECT_UNAUTHORIZED=0 for some internal registries during build.
+- No pnpm workspace.yaml should exist in $HOME — if installs fail with "workspace" errors, check for stale config in ~.
+-->
+
 ## Code Style
 
 <!--
 Naming, file layout, import patterns, formatting rules that aren't enforced
 by tooling. Keep this short - tooling owns the rest.
 -->
+
+## Agent Rules
+
+<!--
+Hard rules that prevent known friction patterns. These override agent defaults.
+-->
+
+- When moving files, ALWAYS update import paths in the moved files AND in all files that import them. Run the test suite before reporting success.
+- When a test fails after file changes, check import paths FIRST — broken relative imports after file moves are the most common root cause.
+- Do NOT guess API names or config keys — grep the codebase or check docs. If unsure, ask rather than trying 3 wrong approaches.
+
+## Project Memory
+
+<!--
+Cross-session knowledge that accumulates over time. Read .claude/memory.md at the
+start of every session for institutional context (module coupling, failure modes,
+patterns that worked). This file is updated by /opsx:archive when the user adds notes.
+
+If .claude/memory.md exists, include it as static context:
+-->
+
+<!-- @include .claude/memory.md -->
 
 ## OpenSpec / Review / GSD
 
@@ -52,4 +97,25 @@ Branch naming, commit style. Conventional Commits is a reasonable default:
 
 One logical change per commit. PR descriptions reference the change spec
 or issue they implement.
+-->
+
+## Hooks
+
+<!--
+Recommended Claude Code hooks to catch common issues automatically.
+Add these to .claude/settings.json or .claude/settings.local.json:
+
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "# Run affected tests after file edits to catch broken imports immediately",
+        "comment": "Catches the most common friction pattern: file moves breaking relative imports"
+      }
+    ]
+  }
+}
+
+Adapt the test command to your stack (vitest, jest, pytest, go test, etc.).
 -->

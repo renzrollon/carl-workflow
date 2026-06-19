@@ -1,10 +1,16 @@
 ---
 name: gsd-classify-tasks
-description: Analyze tasks.md and produce an execution plan with dependency graph, wave groupings, tier classifications, and model routing. Use before gsd-wave-apply to preview the execution plan.
+description: "DEPRECATED — classification is now built into /gsd-wave-apply (step 3-4). This file is kept as reference for classification rules only."
 disable-model-invocation: true
 metadata:
   type: analysis
   version: "1.0"
+  deprecated: true
+  supersededBy: gsd-wave-apply
+---
+
+> **Deprecated**: Task classification is now built into `/gsd-wave-apply` (steps 3-4: classify → preview → confirm → execute). Use `/gsd-wave-apply` directly. This file is retained as a reference for the classification rules.
+
 ---
 
 Analyze an OpenSpec change's tasks and produce an execution plan.

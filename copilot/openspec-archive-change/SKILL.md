@@ -1,12 +1,9 @@
 ---
-name: openspec-archive-change
+name: copilot-archive-change
 description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
-license: MIT
-compatibility: Requires openspec CLI.
 metadata:
-  author: openspec
+  type: finalization
   version: "1.0"
-  generatedBy: "1.4.0"
 ---
 
 Archive a completed change in the experimental workflow.
@@ -17,7 +14,7 @@ Archive a completed change in the experimental workflow.
 
 1. **If no change name provided, prompt for selection**
 
-   Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
+   Run `openspec list --json` to get available changes. Use `vscode_askQuestions` to let the user select.
 
    Show only active changes (not already archived).
    Include the schema used for each change if available.
@@ -37,7 +34,7 @@ Archive a completed change in the experimental workflow.
 
    **If any artifacts are not `done`:**
    - Display warning listing incomplete artifacts
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
+   - Use `vscode_askQuestions` to confirm user wants to proceed
    - Proceed if user confirms
 
 3. **Check task completion status**
@@ -48,7 +45,7 @@ Archive a completed change in the experimental workflow.
 
    **If incomplete tasks found:**
    - Display warning showing count of incomplete tasks
-   - Use **AskUserQuestion tool** to confirm user wants to proceed
+   - Use `vscode_askQuestions` to confirm user wants to proceed
    - Proceed if user confirms
 
    **If no tasks file exists:** Proceed without task-related warning.
@@ -66,15 +63,15 @@ Archive a completed change in the experimental workflow.
    - If changes needed: "Sync now (recommended)", "Archive without syncing"
    - If already synced: "Archive now", "Sync anyway", "Cancel"
 
-   If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
+   If user chooses sync, invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>. Proceed to archive regardless of choice.
 
 5. **Attach metrics to archive record**
 
-   Check if `.claude/metrics/<change-name>-*.json` exists. If so:
+   Check if `.copilot/metrics/<change-name>-*.json` exists. If so:
    - Read the metrics file
    - Copy it into the change directory before archiving (so it travels with the archive):
      ```bash
-     cp .claude/metrics/<change-name>-*.json "<changeRoot>/metrics.json"
+     .copilot/metrics/<change-name>-*.json "<changeRoot>/metrics.json"
      ```
    - This preserves execution data (wave stats, test iterations, duration, commit info) as part of the permanent change record.
 
@@ -103,12 +100,12 @@ Archive a completed change in the experimental workflow.
 
    > "Anything future sessions should know about this change? (e.g., gotchas discovered, coupling between modules, patterns that worked/failed, or things that surprised you)"
 
-   Use AskUserQuestion with options:
+   Use `vscode_askQuestions` with options:
    - "Yes, let me add a note"
    - "No, archive as-is"
 
    **If user provides a note:**
-   - Read `.claude/memory.md` (create if it doesn't exist)
+   - Read `.copilot/memory.md` (create if it doesn't exist)
    - Append an entry under the appropriate section:
      ```markdown
      ### <change-name> (<date>)
@@ -118,33 +115,3 @@ Archive a completed change in the experimental workflow.
    - Place the note under whichever section best fits; if unclear, use `## Patterns & Decisions`
 
 8. **Display summary**
-
-   Show archive completion summary including:
-   - Change name
-   - Schema that was used
-   - Archive location
-   - Whether specs were synced (if applicable)
-   - Whether memory was updated
-   - Note about any warnings (incomplete artifacts/tasks)
-
-**Output On Success**
-
-```
-## Archive Complete
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Archived to:** the archive path derived from `planningHome.changesDir`/YYYY-MM-DD-<name>/
-**Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
-
-All artifacts complete. All tasks complete.
-```
-
-**Guardrails**
-- Always prompt for change selection if not provided
-- Use artifact graph (openspec status --json) for completion checking
-- Don't block archive on warnings - just inform and confirm
-- Preserve .openspec.yaml when moving to archive (it moves with the directory)
-- Show clear summary of what happened
-- If sync is requested, use openspec-sync-specs approach (agent-driven)
-- If delta specs exist, always run the sync assessment and show the combined summary before prompting

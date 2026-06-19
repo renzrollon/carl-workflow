@@ -1,0 +1,55 @@
+# Project Instructions
+
+<!--
+Starter template. Fill in each section with project-specific guidance, or
+delete the sections you don't need. Sections are stack-agnostic on purpose.
+
+For ready-made OpenSpec / Review / GSD blocks, copy snippets from:
+  examples/claude-md-snippets/
+
+in the carl-workflow repo and paste them below.
+-->
+
+## Stack
+
+<!-- describe your stack here: language, frameworks, database, test runner -->
+
+## Architecture
+
+<!--
+High-level shape of the codebase: where things live, what depends on what,
+which boundaries matter (server/client, public/internal, etc.).
+-->
+
+## Code Style
+
+<!--
+Naming, file layout, import patterns, formatting rules that aren't enforced
+by tooling. Keep this short - tooling owns the rest.
+-->
+
+## Copilot Skills
+
+<!--
+Optional. Paste the workflow blocks you want from:
+  examples/claude-md-snippets/openspec.md
+  examples/claude-md-snippets/review.md
+  examples/claude-md-snippets/gsd.md
+-->
+
+## Testing
+
+<!--
+Where tests live, how they run, what to test (behavior vs implementation),
+coverage expectations.
+-->
+
+## Git
+
+<!--
+Branch naming, commit style. Conventional Commits is a reasonable default:
+  feat: ...   fix: ...   chore: ...   refactor: ...   docs: ...   test: ...
+
+One logical change per commit. PR descriptions reference the change spec
+or issue they implement.
+-->
