@@ -1,5 +1,5 @@
 ---
-name: copilot-commit
+name: gsd-commit
 description: Create a single feature-level commit after wave execution. Reads change artifacts to produce a verb-phrase commit message with a summary of changes and optional issue reference.
 metadata:
   type: git
@@ -11,9 +11,9 @@ Create a single, well-crafted commit for all changes produced by `/gsd-wave-appl
 **Input**: Change name (optional — inferred from branch or prompted) + issue reference (optional, e.g. `RD-65`, `PROJ-123`, `#42`)
 
 **Invocation examples**:
-- `/copilot-commit` — infers change name from branch, no issue ref
-- `/copilot-commit RD-65` — uses RD-65 as scope and footer ref
-- `/copilot-commit fix-login RD-65` — explicit change name + issue ref
+- `/gsd-commit` — infers change name from branch, no issue ref
+- `/gsd-commit RD-65` — uses RD-65 as scope and footer ref
+- `/gsd-commit fix-login RD-65` — explicit change name + issue ref
 
 **Steps**
 
@@ -24,7 +24,11 @@ Create a single, well-crafted commit for all changes produced by `/gsd-wave-appl
    - If no issue ref provided as argument, attempt to extract from branch name:
      - `feat/RD-65-task-page` → `RD-65`
      - `fix/PROJ-123-login-bug` → `PROJ-123`
-   - If still no ref found, proceed without one (don't prompt — it's optional)
+     - `feature/TEAM-42-new-dashboard` → `TEAM-42`
+   - **If on a feat/ or fix/ branch but no ref was detected:**
+     - Warn the user: "⚠️ No issue reference found. Branch `<name>` looks like a feature branch — did you mean to include a ticket ref? Pass it as `/gsd-commit <REF>` to avoid rewriting later."
+     - Wait for user to confirm proceeding without a ref, or to provide one
+   - If on main/develop or a branch without feat/fix prefix: proceed silently without ref (it's truly optional)
 
 2. **Read change artifacts for commit context**
 
@@ -69,7 +73,7 @@ Create a single, well-crafted commit for all changes produced by `/gsd-wave-appl
 
    Change: <change-name>
    Refs: <issue-reference>
-   Co-Authored-By: Copilot <noreply@github.com>
+   Co-Authored-By: Claude <noreply@anthropic.com>
    ```
 
    Rules:
@@ -105,7 +109,7 @@ Create a single, well-crafted commit for all changes produced by `/gsd-wave-appl
 
 8. **Append metrics to manifest**
 
-   If `.copilot/metrics/<change-name>-*.json` exists (emitted by `/gsd-wave-apply`), update it with commit metadata:
+   If `.claude/metrics/<change-name>-*.json` exists (emitted by `/gsd-wave-apply`), update it with commit metadata:
 
    Read the most recent metrics file for this change, then add a `commit` section:
    ```json
@@ -120,7 +124,57 @@ Create a single, well-crafted commit for all changes produced by `/gsd-wave-appl
    }
    ```
 
-**Guardrails**
-- Never commit without showing the message first
-- If there are no staged changes, inform the user and stop
-- If the diff is unexpectedly large (> 50 files), warn before committing
+   Use `git diff --stat HEAD~1` to get file/insertion/deletion counts after committing.
+
+9. **Report**
+
+   Show:
+   - Commit hash + subject
+   - Files changed count
+   - Metrics file path (if written)
+   - Suggest next step: `/review-code` or `/opsx:archive`
+
+**Examples**
+
+Feature with issue ref (invoked as `/gsd-commit RD-142`):
+```
+feat(RD-142): add task list page with filtering and detail view
+
+Summary of changes:
+- Added task list page with status filtering and search
+- Created task detail page with metadata sidebar
+- Implemented shared TaskCard and StatusBadge components
+- Added Prisma schema and service layer for tasks
+- Added unit and integration tests for task feature
+
+Change: create-tasks-page
+Refs: RD-142
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+Bug fix with ref extracted from branch `fix/BUG-789-session-expiry`:
+```
+fix(BUG-789): resolve session expiry not redirecting to login
+
+Summary of changes:
+- Fixed middleware to catch expired tokens before route resolution
+- Added redirect logic with return-to URL preservation
+- Updated auth service tests for expiry edge case
+
+Change: fix-session-expiry
+Refs: BUG-789
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+Feature without issue ref:
+```
+feat(nav): add breadcrumb component to all pages
+
+Summary of changes:
+- Created reusable Breadcrumb component with auto-path parsing
+- Integrated into app layout with route-based segment labels
+- Added unit tests for path parsing logic
+
+Change: add-breadcrumbs
+Co-Authored-By: Claude <noreply@anthropic.com>
+```

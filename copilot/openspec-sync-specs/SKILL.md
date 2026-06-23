@@ -1,9 +1,12 @@
 ---
-name: copilot-sync-specs
+name: openspec-sync-specs
 description: Sync delta specs from a change to main specs. Use when the user wants to update main specs with changes from a delta spec, without archiving the change.
+license: MIT
+compatibility: Requires openspec CLI.
 metadata:
-  type: sync
+  author: openspec
   version: "1.0"
+  generatedBy: "1.4.0"
 ---
 
 Sync delta specs from a change to main specs.
@@ -16,7 +19,7 @@ This is an **agent-driven** operation - you will read delta specs and directly e
 
 1. **If no change name provided, prompt for selection**
 
-   Run `openspec list --json` to get available changes. Use `vscode_askQuestions` to let the user select.
+   Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
 
    Show changes that have delta specs (under `specs/` directory).
 
@@ -115,3 +118,30 @@ The system SHALL do something new.
 
 Unlike programmatic merging, you can apply **partial updates**:
 - To add a scenario, just include that scenario under MODIFIED - don't copy existing scenarios
+- The delta represents *intent*, not a wholesale replacement
+- Use your judgment to merge changes sensibly
+
+**Output On Success**
+
+```
+## Specs Synced: <change-name>
+
+Updated main specs:
+
+**<capability-1>**:
+- Added requirement: "New Feature"
+- Modified requirement: "Existing Feature" (added 1 scenario)
+
+**<capability-2>**:
+- Created new spec file
+- Added requirement: "Another Feature"
+
+Main specs are now updated. The change remains active - archive when implementation is complete.
+```
+
+**Guardrails**
+- Read both delta and main specs before making changes
+- Preserve existing content not mentioned in delta
+- If something is unclear, ask for clarification
+- Show what you're changing as you go
+- The operation should be idempotent - running twice should give same result

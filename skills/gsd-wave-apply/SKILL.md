@@ -153,12 +153,31 @@ Classify, preview, and execute OpenSpec tasks using wave-based parallel executio
    - Pre-existing failures (present before this wave started) — note and proceed
    - If verification itself takes >60s, run only typecheck/compile (skip tests)
 
-7. **Update tasks.md**
+7. **Capture constraints discovered during execution**
+
+   During self-correction (step 6) or test wave (step 9), if you fix an issue that matches a recurring pattern, silently append a one-line entry to `.claude/memory.md` so future sessions start with this knowledge:
+
+   | Pattern Detected | Memory Section | Entry Format |
+   |-----------------|---------------|--------------|
+   | Import path breaks after file move | `## Common Failure Modes` | `- <change> (<date>): Moving files in <dir> requires updating <what>` |
+   | Interface mismatch between modules | `## Module Coupling` | `- <change> (<date>): <ModuleA> and <ModuleB> share <type> — changes must coordinate` |
+   | Env var required for feature/test to work | `## Common Failure Modes` | `- <change> (<date>): <feature> requires <ENV_VAR> even in <context>` |
+   | Test requires specific fixture order | `## Common Failure Modes` | `- <change> (<date>): <test area> requires <setup> before running` |
+   | Two files that always change together | `## Module Coupling` | `- <change> (<date>): <fileA> changes always require updating <fileB>` |
+
+   Rules:
+   - Only capture if the pattern is NOVEL — grep `.claude/memory.md` first, skip if a similar entry exists
+   - One line per entry, prefixed with change name and date
+   - Do NOT interrupt execution flow — this is a silent side-effect of the fix
+   - Create `.claude/memory.md` with section headers if it doesn't exist
+   - Maximum 3 entries per session (don't flood memory with noise)
+
+8. **Update tasks.md**
 
    Mark completed tasks: `- [ ]` → `- [x]`
    Do NOT commit — leave all changes unstaged/staged for `/gsd-commit`.
 
-8. **Report wave completion and offer commit**
+9. **Report wave completion and offer commit**
 
    After all waves complete, show:
    - Tasks completed per wave
@@ -174,7 +193,7 @@ Classify, preview, and execute OpenSpec tasks using wave-based parallel executio
      - **"No, I'll commit later"** → stop here
    - If user confirms, invoke the skill with the detected ref
 
-9. **Handle the Verification/Test wave (Cross-Failure Analysis)**
+10. **Handle the Verification/Test wave (Cross-Failure Analysis)**
 
    OpenSpec typically groups all tests as the LAST numbered section in tasks.md (e.g., "## 6. Tests" or "## N. Verification"). This wave is fundamentally different from implementation waves.
 
@@ -254,7 +273,7 @@ Classify, preview, and execute OpenSpec tasks using wave-based parallel executio
    - All test files and fixes remain uncommitted
    - `/gsd-commit` will bundle everything into a single feature commit after execution
 
-10. **Emit metrics**
+11. **Emit metrics**
 
    After all waves complete (including the test wave), write a metrics manifest:
 

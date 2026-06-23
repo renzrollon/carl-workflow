@@ -1,9 +1,12 @@
 ---
-name: copilot-apply-change
+name: openspec-apply-change
 description: Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks.
+license: MIT
+compatibility: Requires openspec CLI.
 metadata:
-  type: execution
+  author: openspec
   version: "1.0"
+  generatedBy: "1.4.0"
 ---
 
 Implement tasks from an OpenSpec change.
@@ -17,7 +20,7 @@ Implement tasks from an OpenSpec change.
    If a name is provided, use it. Otherwise:
    - Infer from conversation context if the user mentioned a change
    - Auto-select if only one active change exists
-   - If ambiguous, run `openspec list --json` to get available changes and use `vscode_askQuestions` to let the user select
+   - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
 
    Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
 
@@ -114,4 +117,85 @@ Working on task 4/7: <task description>
 - [x] Task 1
 - [x] Task 2
 ...
+
+All tasks complete! Ready to archive this change.
 ```
+
+**Output On Pause (Issue Encountered)**
+
+```
+## Implementation Paused
+
+**Change:** <change-name>
+**Schema:** <schema-name>
+**Progress:** 4/7 tasks complete
+
+### Issue Encountered
+<description of the issue>
+
+**Options:**
+1. <option 1>
+2. <option 2>
+3. Other approach
+
+What would you like to do?
+```
+
+**Handling Test/Verification Tasks (Cross-Failure Analysis)**
+
+When the task list contains a test or verification group (typically the last numbered section — tasks starting with "Verify", "Write tests", "Test that", or "Final verification"):
+
+1. **Write all test files first** — implement all "Write tests" tasks before running any of them.
+
+2. **Discovery pass** — run the full verification set in one pass and collect ALL failures:
+   ```bash
+   # Run all new tests + verification checks + full suite
+   npm run typecheck && npm run lint && npm test && npm run build
+   ```
+
+3. **Group failures by root cause** — cluster by error signature:
+   - Same missing import/export across files → path or export fix
+   - Same type error pattern → interface mismatch
+   - Same fixture/setup error → shared test infrastructure
+   - Same logic assertion shape → bug in shared implementation
+
+4. **Fix by root cause** (max 5 iterations total, not per file):
+   - Pick the cluster affecting the most failures
+   - Apply one fix addressing the root cause
+   - Re-run only the affected test set
+   - Remove resolved failures, repeat until clean or budget exhausted
+
+5. **Mark tasks** — only check off test tasks once their tests pass. If failures remain after 5 root-cause iterations, mark with ⚠️ and report.
+
+**Automatic Constraint Capture**
+
+During implementation (step 6) or test fix iterations, if you fix an issue that reveals a recurring pattern, silently append a one-line entry to `.claude/memory.md`:
+
+| Pattern Detected | Memory Section | Entry Format |
+|-----------------|---------------|--------------|
+| Import path breaks after file move | `## Common Failure Modes` | `- <change> (<date>): Moving files in <dir> requires updating <what>` |
+| Interface mismatch between modules | `## Module Coupling` | `- <change> (<date>): <ModuleA> and <ModuleB> share <type> — changes must coordinate` |
+| Env var required for feature/test | `## Common Failure Modes` | `- <change> (<date>): <feature> requires <ENV_VAR> even in <context>` |
+| Test requires specific fixture order | `## Common Failure Modes` | `- <change> (<date>): <test area> requires <setup> before running` |
+| Two files always change together | `## Module Coupling` | `- <change> (<date>): <fileA> changes always require updating <fileB>` |
+
+Rules: only capture novel patterns (grep memory.md first), one line per entry, no user interruption, max 3 entries per session. Create `.claude/memory.md` with section headers if it doesn't exist.
+
+**Guardrails**
+- Keep going through tasks until done or blocked
+- Always read context files before starting (from the apply instructions output)
+- If task is ambiguous, pause and ask before implementing
+- If implementation reveals issues, pause and suggest artifact updates
+- Keep code changes minimal and scoped to each task
+- Update task checkbox immediately after completing each task
+- Pause on errors, blockers, or unclear requirements - don't guess
+- Use contextFiles from CLI output, don't assume specific file names
+- **File moves**: When moving or renaming files, ALWAYS update all import paths — both in the moved file AND in every file that imports it. Run typecheck/tests immediately after to verify. This is the #1 source of post-apply failures.
+- **Unknown APIs**: Do NOT guess config keys, CLI flags, or API names. Grep the codebase or check package docs first. If the first approach fails, investigate before trying alternatives — don't burn iterations on guesses.
+
+**Fluid Workflow Integration**
+
+This skill supports the "actions on a change" model:
+
+- **Can be invoked anytime**: Before all artifacts are done (if tasks exist), after partial implementation, interleaved with other actions
+- **Allows artifact updates**: If implementation reveals design issues, suggest updating artifacts - not phase-locked, work fluidly

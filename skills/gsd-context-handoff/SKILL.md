@@ -50,4 +50,19 @@ Save session state before clearing context.
    - <what to do after /clear>
    ```
 
-4. Instruct user: "Context saved. Run /clear, then resume with: 'Continue <change-name> — read handoff at .claude/handoff/<file>'"
+4. **Capture friction as permanent memory**
+
+   Review the "Issues/Blockers" from this session. For each issue that represents a reusable constraint (not a one-time bug), suggest adding it to `.claude/memory.md`:
+
+   ```
+   ## Suggested Memory Entries
+
+   These issues from this session could prevent friction in future sessions:
+
+   - [ ] "<constraint>" → add to ## Common Failure Modes
+   - [ ] "<constraint>" → add to ## Module Coupling
+   ```
+
+   If the user confirms (or if the constraint was already captured automatically during execution), append the entry. If the user declines, skip — the handoff still preserves the context for the next session.
+
+5. Instruct user: "Context saved. Run /clear, then resume with: 'Continue <change-name> — read handoff at .claude/handoff/<file>'"

@@ -1,5 +1,5 @@
 ---
-name: copilot-review-ts
+name: review-ts
 description: Review implemented code as a senior TypeScript and React developer. Use when the user wants to check type safety, React patterns, performance, and test quality after implementation.
 metadata:
   type: review

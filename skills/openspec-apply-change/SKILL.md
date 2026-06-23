@@ -167,6 +167,20 @@ When the task list contains a test or verification group (typically the last num
 
 5. **Mark tasks** — only check off test tasks once their tests pass. If failures remain after 5 root-cause iterations, mark with ⚠️ and report.
 
+**Automatic Constraint Capture**
+
+During implementation (step 6) or test fix iterations, if you fix an issue that reveals a recurring pattern, silently append a one-line entry to `.claude/memory.md`:
+
+| Pattern Detected | Memory Section | Entry Format |
+|-----------------|---------------|--------------|
+| Import path breaks after file move | `## Common Failure Modes` | `- <change> (<date>): Moving files in <dir> requires updating <what>` |
+| Interface mismatch between modules | `## Module Coupling` | `- <change> (<date>): <ModuleA> and <ModuleB> share <type> — changes must coordinate` |
+| Env var required for feature/test | `## Common Failure Modes` | `- <change> (<date>): <feature> requires <ENV_VAR> even in <context>` |
+| Test requires specific fixture order | `## Common Failure Modes` | `- <change> (<date>): <test area> requires <setup> before running` |
+| Two files always change together | `## Module Coupling` | `- <change> (<date>): <fileA> changes always require updating <fileB>` |
+
+Rules: only capture novel patterns (grep memory.md first), one line per entry, no user interruption, max 3 entries per session. Create `.claude/memory.md` with section headers if it doesn't exist.
+
 **Guardrails**
 - Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)

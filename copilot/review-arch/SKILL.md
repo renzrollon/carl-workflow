@@ -1,5 +1,5 @@
 ---
-name: copilot-review-arch
+name: review-arch
 description: Review OpenSpec change artifacts as a senior frontend architect. Use when the user wants to validate architecture quality, Server/Client boundaries, and design completeness before implementation.
 metadata:
   type: review

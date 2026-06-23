@@ -1,5 +1,5 @@
 ---
-name: copilot-review-artifacts
+name: review-artifacts
 description: Review OpenSpec change artifacts before implementation. Runs Frontend Architect and QA Expert reviewers in sequence to catch architecture and spec issues early.
 metadata:
   type: review

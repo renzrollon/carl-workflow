@@ -1,6 +1,6 @@
 # carl-workflow
 
-A spec-driven, review-gated workflow for shipping software with Claude Code. Bundles 19 skills, a CLAUDE.md template, and an install script. Stack-agnostic — works on any codebase you can run `git` in.
+A spec-driven, review-gated workflow for shipping software with Claude Code. Bundles 22 skills, a CLAUDE.md template, and an install script. Stack-agnostic — works on any codebase you can run `git` in.
 
 This repo is a **methodology + skill bundle**, not a fork of Claude Code. You install the skills into your existing Claude Code setup; the methodology is the prose around them.
 
@@ -51,7 +51,7 @@ flowchart TD
     Gate2 -->|Clean| Archive[openspec-archive-change]
 ```
 
-The arrows above are the happy path. For full routing — including `openspec-sync-specs`, `gsd-context-handoff`, and the single-persona reviewers — see [docs/decision-tree.md](./docs/decision-tree.md). For the narrative explanation of each phase, see [docs/methodology.md](./docs/methodology.md).
+The arrows above are the happy path. For full routing — including `openspec-sync-specs`, `gsd-context-handoff`, and the single-persona reviewers — see [docs/decision-tree.md](./docs/decision-tree.md). For the narrative explanation of each phase, see [docs/methodology.md](./docs/methodology.md). For the four session patterns that produce expert-level results, see [docs/session-shapes.md](./docs/session-shapes.md).
 
 ---
 
@@ -59,13 +59,16 @@ The arrows above are the happy path. For full routing — including `openspec-sy
 
 | Situation | Skill | Doc |
 |---|---|---|
+| Start a session (load context + readiness check) | `gsd-session-primer` | [gsd.md](./docs/skills/gsd.md) |
+| Let the workflow decide what to do | `carl-dispatch` | [gsd.md](./docs/skills/gsd.md) |
 | Adopt the workflow on an existing repo | `openspec-bootstrap` | [openspec.md](./docs/skills/openspec.md) |
 | Understand existing code before touching it | `explain-code` | [explain-code.md](./docs/skills/explain-code.md) |
 | Investigate before designing | `openspec-explore` (or `-deep`) | [openspec.md](./docs/skills/openspec.md) |
 | Design a feature, refactor, or bugfix | `openspec-propose` | [openspec.md](./docs/skills/openspec.md) |
 | Validate a proposal before coding | `review-artifacts` | [review.md](./docs/skills/review.md) |
 | Implement a small / coupled change | `openspec-apply-change` | [openspec.md](./docs/skills/openspec.md) |
-| Implement many independent tasks | `gsd-classify-tasks` → `gsd-wave-apply` → `gsd-commit` | [gsd.md](./docs/skills/gsd.md) |
+| Implement many independent tasks (with specs) | `gsd-classify-tasks` → `gsd-wave-apply` → `gsd-commit` | [gsd.md](./docs/skills/gsd.md) |
+| Parallel ad-hoc work (no specs needed) | `gsd-fan-out` | [gsd.md](./docs/skills/gsd.md) |
 | Validate a diff before archiving | `review-code` | [review.md](./docs/skills/review.md) |
 | Close out a completed change | `openspec-archive-change` | [openspec.md](./docs/skills/openspec.md) |
 | Update canonical specs without archiving | `openspec-sync-specs` | [openspec.md](./docs/skills/openspec.md) |
@@ -75,11 +78,12 @@ The arrows above are the happy path. For full routing — including `openspec-sy
 
 ## Skill catalog
 
-19 bundled skills across three families and two standalones. See [docs/skills/](./docs/skills/) for per-family documentation.
+22 bundled skills across three families, a routing layer, and two standalones. See [docs/skills/](./docs/skills/) for per-family documentation.
 
 - **[OpenSpec](./docs/skills/openspec.md)** — `openspec-bootstrap`, `openspec-explore`, `openspec-explore-deep`, `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-sync-specs`
-- **[GSD](./docs/skills/gsd.md)** (optional wave execution) — `gsd-classify-tasks`, `gsd-wave-apply`, `gsd-commit`, `gsd-context-handoff`
+- **[GSD](./docs/skills/gsd.md)** (wave execution + session management) — `gsd-classify-tasks`, `gsd-wave-apply`, `gsd-commit`, `gsd-context-handoff`, `gsd-session-primer`, `gsd-preflight`, `gsd-fan-out`, `gsd-metrics`
 - **[Review](./docs/skills/review.md)** — `review-artifacts`, `review-code`, `review-arch`, `review-qa`, `review-ts`, `review-devops`
+- **Routing** — `carl-dispatch` (intent classification + pre-flight context loading)
 - **[explain-code](./docs/skills/explain-code.md)** — standalone teaching-mode walkthrough
 - **[gitlab-mr-review](./docs/skills/gitlab-mr-review.md)** — standalone GitLab MR reviewer
 

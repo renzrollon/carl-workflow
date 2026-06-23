@@ -1,6 +1,6 @@
 ---
-name: copilot-metrics
-description: Summarize execution metrics from .copilot/metrics/*.json. Shows aggregated stats across changes — task counts, model distribution, test iterations, durations — and highlights outliers for tier tuning.
+name: gsd-metrics
+description: Summarize execution metrics from .claude/metrics/*.json. Shows aggregated stats across changes — task counts, model distribution, test iterations, durations — and highlights outliers for tier tuning.
 metadata:
   type: analysis
   version: "1.0"
@@ -15,7 +15,7 @@ Summarize GSD wave execution metrics across all recorded changes.
 1. **Load metrics files**
 
    ```bash
-   ls .copilot/metrics/*.json 2>/dev/null
+   ls .claude/metrics/*.json 2>/dev/null
    ```
 
    If no files found, report: "No metrics recorded yet. Run `/gsd-wave-apply` to generate execution metrics."

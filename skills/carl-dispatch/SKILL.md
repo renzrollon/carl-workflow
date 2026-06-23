@@ -12,27 +12,46 @@ Route user intent to the appropriate carl-workflow skill.
 
 **Steps**
 
-1. **Assess project state**
+0. **Pre-flight context load** (silent — no output to user)
 
-   Run quick checks to understand where the project is:
+   Before classifying intent, gather minimum viable context:
 
    ```bash
-   # Check if openspec is initialized
-   ls openspec/ 2>/dev/null
+   # Institutional knowledge
+   cat .claude/memory.md 2>/dev/null | head -40
 
-   # Check for active changes
-   openspec list --json 2>/dev/null
+   # Handoff state
+   ls -t .claude/handoff/*.md 2>/dev/null | head -1
 
-   # Check for active change status (if any)
+   # Branch context (issue ref extraction)
+   git branch --show-current
+
+   # OpenSpec state
    openspec status --json 2>/dev/null
    ```
 
-   Determine:
+   This step runs EVERY dispatch and ensures:
+   1. Memory constraints (env gotchas, module coupling, failure modes) are loaded before any skill executes
+   2. Handoff state informs routing — if a handoff exists and user intent is vague, resume from it
+   3. Branch name provides issue ref context (e.g., `feat/RD-65-*` → issue ref = RD-65)
+   4. Active change phase feeds the routing decision
+
+   If a handoff file exists, read it. Set `handoffNextStep` from its "Next Steps" section.
+
+   DO NOT output this to the user — it feeds the routing logic silently.
+
+1. **Assess project state**
+
+   From the pre-flight data, determine:
+
    - `hasOpenspec`: Does `openspec/` exist?
    - `activeChanges`: List of non-archived changes
    - `currentPhase`: Where is the active change? (proposed / artifact-reviewed / applying / applied / code-reviewed)
    - `hasUncommittedWork`: Does `git status` show relevant changes?
    - `hasHandoff`: Does `.claude/handoff/` contain recent files?
+   - `handoffNextStep`: What did the last session recommend as next action?
+   - `memoryConstraints`: Relevant entries from .claude/memory.md for the current branch/change
+   - `issueRef`: Extracted from branch name if matches pattern (e.g., RD-65, PROJ-123)
 
 2. **Classify user intent**
 
@@ -40,6 +59,7 @@ Route user intent to the appropriate carl-workflow skill.
 
    | Intent | Signal Words | Condition |
    |--------|-------------|-----------|
+   | **resume** | "continue", "pick up", "let's go", "where was I", or empty/vague message | hasHandoff = true |
    | **primer** | "status", "where am I", "what's going on", "briefing" | Any state (session start) |
    | **bootstrap** | "set up", "initialize", "onboard" | No `openspec/` directory |
    | **explore** | "how does", "where is", "understand", "investigate", "explain" | Any state |
@@ -60,6 +80,7 @@ Route user intent to the appropriate carl-workflow skill.
 
    | Intent | State | Skill | Notes |
    |--------|-------|-------|-------|
+   | resume | Handoff exists | Route to skill indicated by `handoffNextStep` | Load handoff context first, then invoke target skill |
    | primer | Any | `/gsd-session-primer` | Read-only status briefing |
    | bootstrap | No openspec/ | `/openspec-bootstrap` | One-time setup |
    | explore | Any | `/openspec-explore` | Use `-deep` if multi-subsystem |
@@ -70,7 +91,6 @@ Route user intent to the appropriate carl-workflow skill.
    | review-code | Change applied | `/review-code` | Gate 2 |
    | archive | All tasks done | `/openspec-archive-change` | Finalize |
    | fix | Any | `/openspec-apply-change` or direct fix | Context-dependent |
-   | resume | Handoff exists | Read handoff → route | Continue from saved state |
    | commit | Uncommitted work | `/gsd-commit` | After wave execution |
    | metrics | Metrics exist | `/gsd-metrics` | Retrospective |
    | explain | Any | `/explain-code` | Teaching mode |
@@ -97,11 +117,31 @@ Route user intent to the appropriate carl-workflow skill.
 
 **Routing Heuristics**
 
+Core rules:
 - If the user says "just do it" or "quick fix" without ceremony → skip proposal/review, apply directly
 - If the change has 5+ independent tasks → recommend GSD wave over standard apply
 - If the user references a specific file → likely explore or fix, not propose
 - If the user says "review" without qualifier → infer from phase (pre-apply = artifacts, post-apply = code)
 - If context is heavy and user seems lost → suggest `/gsd-context-handoff` then `/clear`
+
+Context-aware (uses pre-flight data):
+- If `memoryConstraints` contains entries relevant to the current task → include them in the skill invocation context so the agent starts with institutional knowledge
+- If `issueRef` was extracted from branch → pass it to /gsd-commit automatically (no user reminder needed)
+- If handoff indicates unresolved blockers from last session → surface them immediately: "Last session hit: <blocker>. Resolve first, or work around it?"
+
+Escalation (prevent sessions from drifting to lower quality):
+- Single find-replace or rename → apply directly without full workflow: "This is a 1-minute change — applying directly."
+- Task spans >3 files AND no active change exists → escalate to propose: "This touches enough surface area for a structured change. Running /openspec-propose."
+- Vague request without clear scope or constraints → escalate to explore: "This needs scoping. Running /openspec-explore to define boundaries."
+- Question spans 3+ subsystems → route to explore-deep instead of standard explore
+
+De-escalation (keep sessions short and decisive):
+- Session running >20 min without commit or artifact → warn: "Session running long. Consider /gsd-context-handoff + /clear, or /gsd-commit to lock in progress."
+- 3+ user corrections or wrong approaches in one session → pause: "Multiple corrections suggest unclear scope. Suggest /openspec-explore to solidify constraints before continuing."
+
+Preflight integration:
+- If target skill is a producing skill (propose, apply, wave-apply, fix, explore-deep), invoke `/gsd-preflight` as intermediary before the target skill
+- If target skill is read-only (primer, explain, metrics, explore-light, archive), skip preflight — invoke directly
 
 **Output**
 

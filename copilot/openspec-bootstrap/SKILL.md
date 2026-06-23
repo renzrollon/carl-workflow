@@ -1,9 +1,12 @@
 ---
-name: copilot-bootstrap
+name: openspec-bootstrap
 description: Bootstrap OpenSpec for a brownfield project — analyze existing codebase, produce an initial architecture doc and feature specs from what's already built. Use when onboarding a project with no existing specs.
+license: MIT
+compatibility: Requires openspec CLI. Best with workflow support for parallel subagents.
 metadata:
-  type: discovery
+  author: custom
   version: "1.0"
+  type: discovery
 ---
 
 Bootstrap OpenSpec specifications from an existing (brownfield) codebase.
@@ -40,14 +43,16 @@ This gives future `/opsx:propose` and `/opsx:apply` iterations full awareness of
 
 Invoke via:
 ```
-run(subagent_type="general-purpose", prompt="Bootstrap OpenSpec for this project. Run 'openspec init' if needed, then analyze the codebase from multiple angles and generate initial-architecture.md and feature specs.")
+Workflow({ name: 'openspec-bootstrap', args: { scope: '.' } })
 ```
 
 Spawns specialized exploration agents in parallel, synthesizes findings, then generates specs. Best for medium-to-large codebases where one pass would miss things.
 
+The workflow script lives at `.claude/workflows/openspec-bootstrap.js`.
+
 ### Quick Mode (`--quick`) — Sequential Single-Context
 
-Runs all exploration in the current context sequentially. Faster, cheaper, sufficient for small repos (< 50 source files, single domain). Does NOT invoke subagents — runs inline following the steps below.
+Runs all exploration in the current context sequentially. Faster, cheaper, sufficient for small repos (< 50 source files, single domain). Does NOT invoke the Workflow tool — runs inline following the steps below.
 
 ---
 
@@ -73,120 +78,291 @@ Spawn subagents (or run sequentially in `--quick` mode) to explore the codebase 
 Explore the project directory structure. Report:
 - Top-level organization pattern (by feature, by layer, hybrid)
 - Route/page structure (for web frameworks)
-- Key directories and their purposes
-- Entry points and configuration files
+- Naming conventions observed (files, directories, exports)
+- Key config files and what they configure
+- Monorepo structure if applicable
+
+Return as JSON: { organization, routes[], conventions[], configFiles[], monorepo: bool }
 ```
 
-#### Agent: Dependency Analyzer
-**Goal**: Understand package dependencies, framework choices, external services.
+#### Agent: Dependency & Data Model Analyzer
+**Goal**: Map external dependencies, internal module graph, and data layer.
 ```
-Analyze package.json (or equivalent). Report:
-- Frameworks and libraries in use
-- Version constraints
-- Potential conflicts or unusual combinations
-- External service dependencies (databases, APIs, CDNs)
+Analyze the project's dependency graph and data model. Report:
+- Key dependencies and their roles (ORM, auth, UI, state, testing)
+- Internal module dependency flow (which layers import from which)
+- Database schema / data models (Prisma, TypeORM, raw SQL, etc.)
+- Entity relationships
+- API client/SDK integrations
+
+Return as JSON: { dependencies[], internalLayers[], dataModels[], entityRelationships[], integrations[] }
 ```
 
-#### Agent: Pattern Spotter
-**Goal**: Identify architectural patterns, conventions, and design decisions.
+#### Agent: Pattern Extractor
+**Goal**: Identify established architectural patterns and conventions.
 ```
-Scan source code for patterns. Report:
-- State management approach
-- API/data fetching patterns
-- Error handling strategy
-- Testing patterns
+Read the implementation code and identify recurring patterns. Report:
+- Component patterns (HOCs, hooks, compound, render props, etc.)
+- State management approach (context, stores, URL state, server state)
+- Error handling patterns (boundaries, try/catch, Result types)
 - Authentication/authorization patterns
+- Data fetching patterns (server components, client fetch, actions, loaders)
+- Testing patterns (what's tested, how, coverage approach)
+- Code style patterns (functional vs class, named vs default exports, etc.)
+
+Return as JSON: { componentPatterns[], stateManagement, errorHandling, auth, dataFetching, testing, codeStyle }
+```
+
+#### Agent: API & Interface Scanner
+**Goal**: Map all external-facing interfaces (routes, actions, exports).
+```
+Find and catalog all public interfaces. Report:
+- API routes/endpoints (REST, GraphQL, tRPC)
+- Server Actions (Next.js) or equivalent mutation endpoints
+- Shared schemas/validators (Zod, Yup, io-ts)
+- Public module exports (barrel files, SDK surface)
+- WebSocket/real-time endpoints
+- CLI commands (if applicable)
+
+Return as JSON: { apiRoutes[], serverActions[], schemas[], publicExports[], realtime[], cli[] }
+```
+
+#### Agent: Infrastructure & Config Reader
+**Goal**: Map deployment, environment, and tooling configuration.
+```
+Analyze infrastructure and tooling configuration. Report:
+- Build system and scripts (package.json scripts, Makefile, etc.)
+- Environment variables used (from .env.example, code references)
+- CI/CD configuration (GitHub Actions, GitLab CI, etc.)
+- Deployment target (Vercel, Docker, AWS, etc.)
+- Linting/formatting config (ESLint, Prettier, Biome)
+- TypeScript configuration (strict mode, paths, etc.)
+
+Return as JSON: { buildSystem, scripts[], envVars[], cicd, deployment, linting, typescript }
 ```
 
 ### 2. SYNTHESIZE — Architecture Document
 
-Using findings from all agents, create `openspec/initial-architecture.md`:
+A synthesis agent reads ALL Phase 1 outputs and produces `openspec/initial-architecture.md`:
 
 ```markdown
-# Initial Architecture: <project-name>
+# Initial Architecture
 
-## Overview
-<Brief description of what this project does>
+> Auto-generated by openspec-bootstrap on {date}.
+> This is a point-in-time snapshot, not a living document.
 
-## Stack
-- **Language**: ...
-- **Framework**: ...
-- **Database**: ...
-- **Testing**: ...
+## Stack & Infrastructure
 
-## Directory Structure
-<Explain the organization pattern>
+{technology stack, versions, deployment target}
 
-## Key Patterns
-- <Pattern 1>: <description>
-- <Pattern 2>: <description>
+## Project Organization
 
-## External Dependencies
-- <dependency>: <purpose>
+{directory layout pattern, key directories and their purpose}
 
-## Known Constraints
-- <constraint 1>
-- <constraint 2>
+## Architecture Overview
+
+{high-level system diagram in ASCII}
+{subsystem boundaries, data flow direction}
+
+## Data Model
+
+{entity relationship summary}
+{key models and their relationships}
+
+## Subsystems & Features
+
+{table: subsystem | location | responsibility | key patterns}
+
+## Established Patterns
+
+### Component Architecture
+{patterns discovered: server/client split, composition approach}
+
+### Data Flow
+{how data moves: fetching, mutations, caching, revalidation}
+
+### State Management
+{URL state, server state, client state — where each is used}
+
+### Error Handling
+{strategy: boundaries, error types, user-facing vs internal}
+
+### Authentication & Authorization
+{auth approach, permission model, middleware}
+
+### Testing Strategy
+{what's tested, frameworks used, coverage approach}
+
+## API Surface
+
+{routes, actions, schemas — summary table}
+
+## Design Decisions (Inferred)
+
+{key decisions that can be read from the code — with confidence tags}
+- [EXTRACTED] Decision from explicit code comments/docs
+- [INFERRED] Decision deduced from consistent patterns
+- [AMBIGUOUS] Unclear intent — multiple patterns coexist
+
+## Gaps & Risks
+
+{things that look incomplete, inconsistent, or risky}
+{features started but not finished}
+{patterns that conflict with each other}
 ```
 
-### 3. DISCOVER — Feature Specs
+### 3. IDENTIFY FEATURES — Boundary Detection
 
-For each major feature/capability discovered:
+From the synthesis, identify distinct features/capabilities that should each become a spec. Use these heuristics:
 
-```bash
-mkdir -p openspec/specs/<feature-name>
+- **Route-based**: Each major route group or page = potential feature
+- **Domain-based**: Each data model with CRUD operations = potential feature
+- **Capability-based**: Cross-cutting concerns (auth, error handling, observability) = potential feature
+- **Module-based**: Feature directories or barrel exports = potential feature
+
+Produce a feature list for user confirmation:
+
+```
+Discovered N features to spec:
+1. authentication — Login, register, session management
+2. task-crud — Create, read, update, delete tasks
+3. app-shell — Layout, navigation, route protection
+...
+
+Generate specs for all? Or select specific ones?
 ```
 
-Create `openspec/specs/<feature-name>/spec.md`:
+### 4. SPEC GENERATION — Parallel Per Feature
 
-```markdown
-# Spec: <feature-name>
+For each confirmed feature, spawn a subagent (or run sequentially in quick mode):
+
+```
+You are generating an OpenSpec spec for an EXISTING feature — documenting what IS built, not what SHOULD be built.
+
+Feature: {name}
+Architecture context: {relevant section from initial-architecture.md}
+Source files: {file paths for this feature}
+
+Read the implementation files and produce a spec following this template:
 
 ## Purpose
-<Why this capability exists>
+{What this feature does — one paragraph}
 
 ## Requirements
-### Requirement: <requirement-name>
-The system SHALL <capability>.
 
-#### Scenario: <scenario-name>
-- **WHEN** <trigger>
-- **THEN** <expected-result>
+### Requirement: {requirement name}
+{What the system does — use "SHALL" language, present tense, describing current behavior}
+
+#### Scenario: {scenario name}
+- **WHEN** {trigger condition}
+- **THEN** {observable outcome}
+
+Rules:
+- Document CURRENT behavior, not aspirational
+- Every requirement must be verifiable against the existing code
+- Include edge cases you can observe in the code (error handling, validation, empty states)
+- Use the Given/When/Then format for scenarios
+- Tag any requirement where behavior is unclear: <!-- INFERRED: reason -->
 ```
 
-### 4. UPDATE — Config
+### 5. UPDATE CONFIG
 
-Update `openspec/config.yaml` with discovered context:
+Update `openspec/config.yaml` with discovered project context:
 
 ```yaml
-projectContext:
-  stack: "<language>/<framework>"
-  patterns: ["<pattern1>", "<pattern2>"]
-  constraints: ["<constraint1>"]
+schema: spec-driven
+
+context: |
+  Tech stack: {discovered stack}
+  Architecture: {one-line summary}
+  Conventions: {key conventions}
+  Domain: {project domain}
+
+rules:
+  proposal:
+    - Reference openspec/initial-architecture.md for current-state context
+    - Check existing specs before proposing overlapping features
+  design:
+    - Follow established patterns documented in initial-architecture.md
+    - Justify deviations from existing patterns
+  specs:
+    - New specs must not contradict existing spec requirements
+    - Use the same terminology as existing specs
 ```
 
-### 5. REPORT
+### 6. FINAL REPORT
 
 ```
 ## Bootstrap Complete
 
-**Project**: <name>
-**Architecture doc**: openspec/initial-architecture.md
-**Features discovered**: N
-**Specs created**:
-- specs/<feature1>/spec.md
-- specs/<feature2>/spec.md
+Architecture: openspec/initial-architecture.md
+Specs generated: N
+  - {list of spec names}
+Config updated: openspec/config.yaml
 
-Next steps:
-- Review the architecture doc for accuracy
-- Run `/opsx:propose` to start making changes
+Existing specs preserved: {list if any}
+Confidence: {HIGH if small/clear codebase, MEDIUM if large/complex, LOW if inconsistent patterns}
+
+### Recommended Next Steps
+1. Review initial-architecture.md — correct any misinterpretations
+2. Review generated specs — mark any INFERRED requirements to verify
+3. Run `openspec validate` to check spec structure
+4. Use `/opsx:propose` for your next feature — it now has full context
 ```
+
+---
+
+## Subagent Orchestration (Full Mode)
+
+Full mode invokes the `openspec-bootstrap` workflow (`.claude/workflows/openspec-bootstrap.js`):
+
+```
+Workflow({ name: 'openspec-bootstrap', args: { scope: args.scope || '.' } })
+```
+
+The workflow runs 5 phases:
+1. **Discover** — 5 parallel sonnet agents explore structure, deps, patterns, API, infra
+2. **Synthesize** — opus agent merges all findings into `initial-architecture.md`
+3. **Identify** — opus agent detects feature boundaries (skips already-specced features)
+4. **Spec** — pipeline of sonnet agents generates one spec per feature
+5. **Finalize** — updates `config.yaml`, reports results
+
+Model routing:
+- Phase 1 agents: sonnet (exploration, structured output)
+- Phase 2 synthesis: opus (cross-referencing, judgment calls)
+- Phase 3 detection: opus (boundary judgment)
+- Phase 4 agents: sonnet (template-following, per-feature)
+- Phase 5: sonnet (file writing)
 
 ---
 
 ## Guardrails
 
-- Don't overwrite existing specs — append new ones
-- If the project is very small (< 10 source files), recommend quick mode
-- Always validate that `openspec init` succeeded before proceeding
-- Ask user confirmation before creating feature specs (don't auto-generate from assumptions)
+- **Never overwrite existing specs** — Only generate specs for features that don't already have one
+- **Never modify source code** — This is analysis only, no implementation
+- **Tag confidence** — Use EXTRACTED/INFERRED/AMBIGUOUS tags so the user knows what to verify
+- **Respect .gitignore** — Don't analyze node_modules, build output, etc.
+- **Cap subagents** — Maximum 8 parallel agents in Phase 1, 12 in Phase 4 (even for large repos, batch)
+- **Scope option** — If `--scope` is provided, limit all exploration to that path
+- **Idempotent** — Running again should produce consistent results (skip already-specced features)
+
+---
+
+## Quick Mode Differences
+
+When `--quick` is passed:
+- No subagents — all exploration runs sequentially in main context
+- Phase 1 collapses into: read tree, read package.json, scan key files (max 20)
+- Phase 2 produces a shorter architecture doc (skip ASCII diagrams, shorter tables)
+- Phase 4 generates specs sequentially (no parallel)
+- Total: ~5 min for a small repo vs ~2 min per feature in full mode
+
+---
+
+## Integration with OpenSpec Workflow
+
+After bootstrap:
+- `/opsx:explore` can reference `initial-architecture.md` for grounding
+- `/opsx:propose` sees specs from `openspec list --specs` — won't duplicate existing features
+- `openspec instructions` pulls context from `config.yaml` — enriches all future artifact generation
+- `/review-arch` can validate new designs against established patterns in architecture doc

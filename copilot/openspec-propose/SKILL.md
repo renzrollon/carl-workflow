@@ -1,9 +1,12 @@
 ---
-name: copilot-propose
+name: openspec-propose
 description: Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation.
+license: MIT
+compatibility: Requires openspec CLI.
 metadata:
-  type: creation
+  author: openspec
   version: "1.0"
+  generatedBy: "1.4.0"
 ---
 
 Propose a new change - create the change and generate all artifacts in one step.
@@ -23,7 +26,7 @@ When ready to implement, run /opsx:apply
 
 1. **If no clear input provided, ask what they want to build**
 
-   Use `vscode_askQuestions` (open-ended, no preset options) to ask:
+   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
    > "What change do you want to work on? Describe what you want to build or fix."
 
    From their description, derive a kebab-case name (e.g., "add user authentication" → `add-user-auth`).
@@ -47,7 +50,7 @@ When ready to implement, run /opsx:apply
 
 4. **Create artifacts in sequence until apply-ready**
 
-   Track progress through the artifacts.
+   Use the **TodoWrite tool** to track progress through the artifacts.
 
    Loop through artifacts in dependency order (artifacts with no pending dependencies first):
 
@@ -74,7 +77,7 @@ When ready to implement, run /opsx:apply
       - Stop when all `applyRequires` artifacts are done
 
    c. **If an artifact requires user input** (unclear context):
-      - Use `vscode_askQuestions` to clarify
+      - Use **AskUserQuestion tool** to clarify
       - Then continue with creation
 
 5. **Show final status**

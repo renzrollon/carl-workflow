@@ -1,5 +1,5 @@
 ---
-name: copilot-review-devops
+name: review-devops
 description: Review code changes as a DevOps engineer for deploy-readiness. Use when the user wants to check env vars, dependencies, security, and build health. Skips automatically for UI-only changes.
 metadata:
   type: review

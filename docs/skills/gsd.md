@@ -10,12 +10,16 @@ The family expects model-tier routing — sonnet for tier 1-3 tasks (single-file
 
 ## Composition
 
-The skills compose into a linear pipeline with one optional checkpoint. `gsd-classify-tasks` previews the wave plan from `tasks.md` so you can sanity-check the dependency graph and tier assignments before dispatching work. `gsd-wave-apply` then executes each wave, parallelizing independent tasks via fresh-context subagents and sequencing the verification/test wave at the end. After execution, you (or `/review-code`) review the uncommitted diff, then `/gsd-commit` produces a single feature-level commit. `gsd-context-handoff` is an optional escape hatch — use it before `/clear` if context is heavy mid-flow, so the next session can resume without losing decisions and progress.
+The skills compose into a linear pipeline with checkpoints and utilities. `gsd-session-primer` front-loads context at session start. `gsd-preflight` classifies the session shape and orchestration strategy. `gsd-classify-tasks` previews the wave plan so you can sanity-check tier assignments. `gsd-wave-apply` executes waves in parallel. `gsd-fan-out` provides the same parallelism for ad-hoc work without OpenSpec artifacts. After execution, `/gsd-commit` produces a single feature commit. `gsd-context-handoff` preserves state before `/clear`.
 
 ```mermaid
 flowchart LR
-    A[gsd-classify-tasks<br/>preview wave plan] --> B[gsd-wave-apply<br/>parallel execution<br/>no commits]
+    P[gsd-session-primer<br/>load context] --> PF[gsd-preflight<br/>classify shape]
+    PF --> A[gsd-classify-tasks<br/>preview wave plan]
+    A --> B[gsd-wave-apply<br/>parallel execution<br/>no commits]
+    PF --> F[gsd-fan-out<br/>ad-hoc parallel<br/>no OpenSpec needed]
     B --> C[review<br/>human or /review-code]
+    F --> C
     C --> D[gsd-commit<br/>single feature commit]
     B -.optional.-> E[gsd-context-handoff<br/>preserve state before /clear]
     E -.resume.-> B
@@ -128,3 +132,63 @@ None beyond a writable `.claude/handoff/` directory and an active session worth 
 
 ### Source
 `skills/gsd-context-handoff/SKILL.md`
+
+## gsd-session-primer
+
+### Purpose
+Load project context at session start and produce a concise status briefing with a readiness assessment for expert-level execution.
+
+### When to use
+At the start of any session, especially when resuming work or when you want to verify all preconditions are met before executing.
+
+### When to skip
+Skip when you already have full context (e.g., continuing immediately after a brief /clear with handoff).
+
+### Inputs
+None — reads from project state.
+
+### Outputs
+A 5-8 line briefing covering branch state, last activity, active change progress, uncommitted files, resume hint, and next suggested action. Includes a readiness score (N/5 expert-session preconditions met).
+
+### Source
+`skills/gsd-session-primer/SKILL.md`
+
+## gsd-preflight
+
+### Purpose
+Classify the session into a shape (plan-execute, structured-execute, investigate-propose, targeted-fix) and emit a constraint block that downstream skills consume. Ensures producing sessions start with explicit scope, orchestration strategy, and loaded constraints.
+
+### When to use
+Fires automatically via carl-dispatch for producing actions (propose, apply, wave-apply, fix, explore-deep). You don't invoke it directly.
+
+### When to skip
+Skipped automatically for read-only skills (primer, explain, metrics, explore-light, archive).
+
+### Inputs
+User intent + pre-flight context from carl-dispatch.
+
+### Outputs
+A structured constraint block (shape, scope, orchestration decision, loaded constraint sources, task-tracking requirement) that the target skill reads as prefix context.
+
+### Source
+`skills/gsd-preflight/SKILL.md`
+
+## gsd-fan-out
+
+### Purpose
+General-purpose parallel execution for ad-hoc work that doesn't require OpenSpec artifacts. Decomposes a goal into 2-5 independent file-disjoint subtasks, dispatches subagents in parallel, verifies combined results.
+
+### When to use
+When carl-dispatch detects parallelizable work outside the OpenSpec lifecycle: applying a pattern across multiple files, fixing multiple independent bugs, code cleanup across modules, or any 2-5 piece decomposable task.
+
+### When to skip
+Skip for single-file changes (no overhead benefit), coupled tasks with dependencies, work needing design decisions, or tasks with >5 pieces (use wave-apply with proper artifacts instead).
+
+### Inputs
+User's goal (natural language) + optional `--no-confirm` flag.
+
+### Outputs
+A completion report per subtask, combined verification result, and suggestion to commit.
+
+### Source
+`skills/gsd-fan-out/SKILL.md`

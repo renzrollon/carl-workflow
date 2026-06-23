@@ -1,5 +1,5 @@
 ---
-name: copilot-review-qa
+name: review-qa
 description: Review OpenSpec change artifacts as a senior QA engineer. Use when the user wants to validate spec completeness, edge case coverage, testability, and task quality before implementation.
 metadata:
   type: review

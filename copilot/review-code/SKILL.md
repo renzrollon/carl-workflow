@@ -1,5 +1,5 @@
 ---
-name: copilot-review-code
+name: review-code
 description: Review implemented code changes for the active OpenSpec change. Runs TypeScript/Frontend and DevOps reviewers in sequence to verify quality and deploy-readiness.
 metadata:
   type: review
