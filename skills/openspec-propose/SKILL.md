@@ -48,13 +48,23 @@ When ready to implement, run /opsx:apply
    - `artifacts`: list of all artifacts with their status and dependencies
    - `planningHome`, `changeRoot`, `artifactPaths`, and `actionContext`: path and scope context. Use these instead of assuming repo-local paths.
 
-4. **Create artifacts in sequence until apply-ready**
+4. **Create artifacts in strict dependency order**
 
    Use the **TodoWrite tool** to track progress through the artifacts.
 
-   Loop through artifacts in dependency order (artifacts with no pending dependencies first):
+   **CRITICAL: You MUST create artifacts in dependency order. NEVER skip ahead to a downstream artifact (e.g., tasks) before ALL of its upstream dependencies (e.g., specs, design) are created and confirmed "done" by the CLI.**
 
-   a. **For each artifact that is `ready` (dependencies satisfied)**:
+   Loop:
+
+   a. **Run status to determine the next artifact to create**:
+      ```bash
+      openspec status --change "<name>" --json
+      ```
+      - Find the FIRST artifact with `status: "ready"` (dependencies satisfied, not yet created)
+      - If NO artifact has `status: "ready"` and ALL artifacts have `status: "done"` → stop (step 4d)
+      - **You may ONLY create an artifact that the CLI reports as `"ready"`**. If an artifact's status is `"pending"` (dependencies not yet satisfied), you MUST create its dependencies first.
+
+   b. **Create the next ready artifact**:
       - Get instructions:
         ```bash
         openspec instructions <artifact-id> --change "<name>" --json
@@ -71,14 +81,15 @@ When ready to implement, run /opsx:apply
       - Apply `context` and `rules` as constraints - but do NOT copy them into the file
       - Show brief progress: "Created <artifact-id>"
 
-   b. **Continue until all `applyRequires` artifacts are complete**
-      - After creating each artifact, re-run `openspec status --change "<name>" --json`
-      - Check if every artifact ID in `applyRequires` has `status: "done"` in the artifacts array
-      - Stop when all `applyRequires` artifacts are done
-
    c. **If an artifact requires user input** (unclear context):
       - Use **AskUserQuestion tool** to clarify
       - Then continue with creation
+
+   d. **Stopping condition: ALL artifacts must be "done"**
+      - After creating each artifact, re-run `openspec status --change "<name>" --json`
+      - Check that EVERY artifact in the `artifacts` array has `status: "done"`
+      - **Do NOT stop just because `applyRequires` artifacts are done** — if any artifact still has status "ready" or "pending", you must continue creating them
+      - Only stop when no artifacts remain with status "ready" or "pending"
 
 5. **Show final status**
    ```bash
@@ -104,7 +115,9 @@ After completing all artifacts, summarize:
   - These guide what you write, but should never appear in the output
 
 **Guardrails**
-- Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)
+- **NEVER skip artifacts**: Create ALL artifacts defined in the schema, not just those in `applyRequires`. The dependency graph must be fully satisfied.
+- **NEVER create an artifact out of order**: Only create artifacts the CLI reports as `"ready"`. If you're tempted to jump ahead to `tasks` but `specs` is still "ready" or "pending", you MUST create `specs` first.
+- **Use the CLI as the source of truth**: Always re-run `openspec status` after each artifact creation. Do not assume an artifact is done — confirm it via the CLI's status output.
 - Always read dependency artifacts before creating a new one
 - If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
 - If a change with that name already exists, ask if user wants to continue it or create a new one
