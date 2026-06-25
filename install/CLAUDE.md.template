@@ -82,6 +82,46 @@ If .claude/memory.md exists, include it as static context:
 - Prefer decisive action over speculative exploration. If you have enough context to act, act. If you don't, state what's missing and ask.
 - If the session exceeds 30 minutes without producing a commit or artifact: pause and suggest /gsd-context-handoff + /clear to stay sharp.
 
+## Dynamic Workflows
+
+<!--
+carl-workflow includes saved dynamic workflows (Claude Code v2.1.154+) that
+orchestrate subagents at scale with deterministic control flow. They live in
+~/.claude/workflows/ after installation.
+
+Available workflows:
+- /wave-apply — Wave execution with inter-wave verification and cross-failure test analysis
+- /review    — Multi-dimensional review with adversarial verification of findings
+- /fan-out   — Lightweight parallel execution for ad-hoc tasks
+
+Trigger any workflow by typing its /name, or include "ultracode" in your prompt
+to let Claude write a workflow for the current task automatically.
+-->
+
+- To run a workflow: type `/wave-apply`, `/review`, or `/fan-out`
+- To trigger ad-hoc workflow orchestration: include the keyword `ultracode` in your prompt
+- To enable persistent ultracode mode: `/effort ultracode`
+
+## Agent Teams
+
+<!--
+For complex investigations or cross-layer feature work, agent teams let multiple
+Claude Code sessions coordinate. Enable with the env var below.
+
+Best use cases:
+- Competing-hypothesis debugging (3-5 agents investigate different theories)
+- Cross-layer development (frontend + backend + test teammates)
+- Research sessions that need inter-agent debate
+
+Requires: CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+Set in ~/.claude/settings.json or your shell environment.
+-->
+
+<!-- Uncomment to enable agent teams:
+- For debugging sessions with unclear root cause: ask Claude to "spawn teammates to investigate competing hypotheses"
+- For cross-layer features: ask Claude to "spawn teammates for frontend, backend, and tests"
+-->
+
 ## OpenSpec / Review / GSD
 
 <!--

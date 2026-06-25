@@ -14,6 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_SRC="$REPO_ROOT/skills"
+WORKFLOWS_SRC="$REPO_ROOT/workflows"
 
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 FORCE=0
@@ -117,14 +118,19 @@ fi
 
 SKILLS_DEST="$CLAUDE_HOME/skills"
 
+WORKFLOWS_DEST="$CLAUDE_HOME/workflows"
+
 log "carl-workflow installer"
-log "  source:      $SKILLS_SRC"
-log "  destination: $SKILLS_DEST"
+log "  skills src:    $SKILLS_SRC"
+log "  skills dest:   $SKILLS_DEST"
+log "  workflows src: $WORKFLOWS_SRC"
+log "  workflows dest:$WORKFLOWS_DEST"
 if [ "$DRY_RUN" -eq 1 ]; then log "  mode:        dry-run"; fi
 if [ "$FORCE"   -eq 1 ]; then log "  force:       yes"; fi
 log ""
 
 run "mkdir -p \"$SKILLS_DEST\""
+run "mkdir -p \"$WORKFLOWS_DEST\""
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -177,15 +183,69 @@ for src in "$SKILLS_SRC"/*/; do
 done
 
 # ---------------------------------------------------------------------------
+# Workflows
+# ---------------------------------------------------------------------------
+
+WORKFLOWS_INSTALLED=0
+WORKFLOWS_REPLACED=0
+
+if [ -d "$WORKFLOWS_SRC" ]; then
+  for src in "$WORKFLOWS_SRC"/*.js; do
+    [ -f "$src" ] || continue
+    name="$(basename "$src")"
+    dest="$WORKFLOWS_DEST/$name"
+
+    if [ ! -e "$dest" ]; then
+      log "install   workflow: $name"
+      run "cp \"$src\" \"$dest\""
+      WORKFLOWS_INSTALLED=$((WORKFLOWS_INSTALLED + 1))
+      continue
+    fi
+
+    if [ "$FORCE" -eq 1 ]; then
+      backup="$dest.bak.$(timestamp)"
+      log "replace   workflow: $name (backup: $(basename "$backup"))"
+      run "mv \"$dest\" \"$backup\""
+      run "cp \"$src\" \"$dest\""
+      WORKFLOWS_REPLACED=$((WORKFLOWS_REPLACED + 1))
+      continue
+    fi
+
+    printf 'Workflow %s exists. [s]kip / [b]ackup-and-replace / [a]bort? (s) ' "$name"
+    if ! read -r choice; then
+      choice=""
+    fi
+    case "${choice:-s}" in
+      b|B)
+        backup="$dest.bak.$(timestamp)"
+        log "  backup -> $(basename "$backup")"
+        run "mv \"$dest\" \"$backup\""
+        run "cp \"$src\" \"$dest\""
+        WORKFLOWS_REPLACED=$((WORKFLOWS_REPLACED + 1))
+        ;;
+      a|A)
+        log "Aborted by user."
+        exit 1
+        ;;
+      *)
+        log "  skipped"
+        ;;
+    esac
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
 log ""
 log "Summary:"
-log "  installed: $INSTALLED"
-log "  replaced:  $REPLACED"
-log "  skipped:   $SKIPPED"
-log "  conflicts: $CONFLICTS"
+log "  skills installed:    $INSTALLED"
+log "  skills replaced:     $REPLACED"
+log "  skills skipped:      $SKIPPED"
+log "  skills conflicts:    $CONFLICTS"
+log "  workflows installed: $WORKFLOWS_INSTALLED"
+log "  workflows replaced:  $WORKFLOWS_REPLACED"
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log ""

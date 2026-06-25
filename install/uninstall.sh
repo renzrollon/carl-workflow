@@ -14,6 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_SRC="$REPO_ROOT/skills"
+WORKFLOWS_SRC="$REPO_ROOT/workflows"
 
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 FORCE=0
@@ -161,14 +162,59 @@ for src in "$SKILLS_SRC"/*/; do
 done
 
 # ---------------------------------------------------------------------------
+# Workflows
+# ---------------------------------------------------------------------------
+
+WORKFLOWS_DEST="$CLAUDE_HOME/workflows"
+WF_REMOVED=0
+WF_MISSING=0
+
+if [ -d "$WORKFLOWS_SRC" ] && [ -d "$WORKFLOWS_DEST" ]; then
+  for src in "$WORKFLOWS_SRC"/*.js; do
+    [ -f "$src" ] || continue
+    name="$(basename "$src")"
+    dest="$WORKFLOWS_DEST/$name"
+
+    if [ ! -e "$dest" ]; then
+      log "missing   workflow: $name"
+      WF_MISSING=$((WF_MISSING + 1))
+      continue
+    fi
+
+    if [ "$FORCE" -eq 0 ]; then
+      log "would-rm  workflow: $name"
+      continue
+    fi
+
+    printf 'Remove workflow %s? [y/N] ' "$name"
+    if ! read -r choice; then
+      choice=""
+    fi
+    case "${choice:-n}" in
+      y|Y)
+        log "remove    workflow: $name"
+        run "rm -f \"$dest\""
+        WF_REMOVED=$((WF_REMOVED + 1))
+        ;;
+      *)
+        log "skip      workflow: $name"
+        SKIPPED=$((SKIPPED + 1))
+        ;;
+    esac
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
 log ""
 log "Summary:"
-log "  removed:   $REMOVED"
-log "  skipped:   $SKIPPED"
-log "  missing:   $MISSING"
+log "  skills removed:    $REMOVED"
+log "  skills skipped:    $SKIPPED"
+log "  skills missing:    $MISSING"
+log "  workflows removed: $WF_REMOVED"
+log "  workflows missing: $WF_MISSING"
 
 if [ "$FORCE" -eq 0 ]; then
   log ""
